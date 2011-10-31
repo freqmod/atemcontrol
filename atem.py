@@ -5,6 +5,7 @@ import random
 import fcntl
 import sys
 import os
+import pypm
 HOST = '192.168.10.240'    # The remote host
 PORT = 9910              # The same port as used by the server
 def rand(max):
@@ -48,6 +49,8 @@ def print_pkt(cmd, len, uid, cnt_out, unkn1, unkn2, cnt_in, payload):
            hex(cnt_in), )
 #           hexlify(payload))
 
+interf,name,inp,outp,opened = pypm.GetDeviceInfo(0)
+midiin = pypm.Input(0)
 
 # make stdin a non-blocking file
 fd = sys.stdin.fileno()
@@ -93,17 +96,27 @@ while True:
 #    else:
 #        send_pkt(sock, 0x80, uid, 0, 0, mycnt, 0, '')
 #        mycnt+=1
+    midi_msg = midiin.Read(1) 
+    if pkg:
+        data, counter = pkg[0]
+        bank, instrument, value, val2 = data
+        print bank,instrument,value
+#        88 18 801c 01e1 0000 0000 01f7 - 000c 0000 4354 5073 0054 01f1 (Example pkg - value from 0-1000)
+        payload = pack("!HHHHHH", 0x000c, 0x0000,0x4354, 0x5073, 0x0054, int(value*7.87))#value from 0-1000
+        send_pkt(sock, 0x88, uid, cnt_in, 0, 0, mycnt, payload) 
+
+    #Read from command line
     line = None
     try:
         line = sys.stdin.readline()
     except:
         pass
-#    print "Line:", line,"<"
-    if line:
-        print "Kake"
-#        88 18 801c 01e1 0000 0000 01f7 - 000c 0000 4354 5073 0054 01f1
-        payload = pack("!HHHHHH", 0x000c, 0x0000,0x4354, 0x5073, 0x0054, int(line))
+    if line: #Send mixer info
+#        88 18 801c 01e1 0000 0000 01f7 - 000c 0000 4354 5073 0054 01f1 (Example pkg)
+        payload = pack("!HHHHHH", 0x000c, 0x0000,0x4354, 0x5073, 0x0054, int(line))#value from 0-1000
         send_pkt(sock, 0x88, uid, cnt_in, 0, 0, mycnt, payload) 
+
+    #Sett standard command number
     if (mycnt == 0 and hello_finished):
         cmd = 0x80
         
