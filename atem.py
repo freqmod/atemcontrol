@@ -1,3 +1,11 @@
+#Blackmagic ATEM switch control
+#Controls fader from midi input messages
+#Midi messages not tested
+#Works with Blackmagic ATEM television studio - standard config
+#Midi requires pyportmidi
+#Reverse engineering info:
+#http://atemuser.com/forums/atem-vision-mixers/blackmagic-atems/controlling-atem
+#http://sig11.de/~ratte/misc/atem/
 from struct import pack, unpack
 from binascii import hexlify, unhexlify
 import socket
@@ -5,7 +13,13 @@ import random
 import fcntl
 import sys
 import os
-import pypm
+has_midi = False
+try:
+    import pypm
+    has_midi = True
+except:
+    pass
+    
 HOST = '192.168.10.240'    # The remote host
 PORT = 9910              # The same port as used by the server
 def rand(max):
@@ -49,8 +63,12 @@ def print_pkt(cmd, len, uid, cnt_out, unkn1, unkn2, cnt_in, payload):
            hex(cnt_in), )
 #           hexlify(payload))
 
-interf,name,inp,outp,opened = pypm.GetDeviceInfo(0)
-midiin = pypm.Input(0)
+midiin = None
+if has_midi:
+    print "Pre midi init"
+    interf,name,inp,outp,opened = pypm.GetDeviceInfo(0)
+    midiin = pypm.Input(0)
+    print "Post midi init"
 
 # make stdin a non-blocking file
 fd = sys.stdin.fileno()
@@ -96,14 +114,15 @@ while True:
 #    else:
 #        send_pkt(sock, 0x80, uid, 0, 0, mycnt, 0, '')
 #        mycnt+=1
-    midi_msg = midiin.Read(1) 
-    if pkg:
-        data, counter = pkg[0]
-        bank, instrument, value, val2 = data
-        print bank,instrument,value
-#        88 18 801c 01e1 0000 0000 01f7 - 000c 0000 4354 5073 0054 01f1 (Example pkg - value from 0-1000)
-        payload = pack("!HHHHHH", 0x000c, 0x0000,0x4354, 0x5073, 0x0054, int(value*7.87))#value from 0-1000
-        send_pkt(sock, 0x88, uid, cnt_in, 0, 0, mycnt, payload) 
+    if midiin:
+        midi_msg = midiin.Read(1) 
+        if pkg:
+            data, counter = pkg[0]
+            bank, instrument, value, val2 = data
+            print bank,instrument,value
+    #        88 18 801c 01e1 0000 0000 01f7 - 000c 0000 4354 5073 0054 01f1 (Example pkg - value from 0-1000)
+            payload = pack("!HHHHHH", 0x000c, 0x0000,0x4354, 0x5073, 0x0054, int(value*7.87))#value from 0-1000
+            send_pkt(sock, 0x88, uid, cnt_in, 0, 0, mycnt, payload) 
 
     #Read from command line
     line = None
