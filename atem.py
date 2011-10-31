@@ -1,3 +1,7 @@
+#License: http://www.gnu.org/licenses/agpl.html
+#(c) Frederik M.J. Vestre (ved/for Studentersamfundet i Trondheim)
+#Based on perl code/reverse engineering by Michael Pötter, 
+#and reverse engineering with wireshark
 #Blackmagic ATEM switch control
 #Controls fader from midi input messages
 #Midi messages not tested
